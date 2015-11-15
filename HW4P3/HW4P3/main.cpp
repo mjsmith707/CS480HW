@@ -12,6 +12,7 @@
 #include <random>
 #include <chrono>
 #include <cmath>
+#include <iomanip>
 #include "MNISTLoader.h"
 #include "RaviMNISTLoader.h"
 #include "Perceptron.h"
@@ -25,11 +26,15 @@ std::vector<LabeledData> generateOnesFivesSet(size_t limit, std::vector<LabeledD
 // Calculate the standardized features across the entire set
 void calcStandardizedFeatures(std::vector<LabeledData>& labeledSet);
 
+void printPerceptron(Perceptron<LabeledData>& mnistPerceptron);
+double runTestData(Perceptron<LabeledData>& mnistPerceptron, std::vector<LabeledData>& labeledSet);
+
 int main(int argc, const char * argv[]) {
     MNISTLoader loader;
     if (argc != 5) {
         std::cerr << "Usage: ./a.out trainingLabelFile trainingImageFile testLabelFile testImageFile" << std::endl;
         std::cerr << "E.x.: ./a.out train-labels.idx1-ubyte train-images.idx3-ubyte t10k-labels.idx1-ubyte t10k-images.idx3-ubyte" << std::endl;
+        std::cerr << "See: http://yann.lecun.com/exdb/mnist/ for these files" << std::endl;
         exit(-1);
     }
 
@@ -38,7 +43,7 @@ int main(int argc, const char * argv[]) {
     std::string trainingImagePath = argv[2];
     std::string testLabelPath = argv[3];
     std::string testImagePath = argv[4];
-    std::cout << "Loading the MNIST Dataset... This could take a minute..." << std::endl;
+    std::cout << "Loading the dataset... This could take a minute..." << std::endl;
     std::vector<LabeledData> trainingset = loader.readDataSet(trainingLabelPath, trainingImagePath);
     std::vector<LabeledData> testset = loader.readDataSet(testLabelPath, testImagePath);
     
@@ -51,8 +56,8 @@ int main(int argc, const char * argv[]) {
     std::shuffle(testset.begin(), testset.end(), std::default_random_engine(seed));
     
     // Generate a subset of each containing only ones and fives
-    std::vector<LabeledData> trainingOnesFivesSet = generateOnesFivesSet(500, trainingset);
-    std::vector<LabeledData> testOnesFivesSet = generateOnesFivesSet(500, testset);
+    std::vector<LabeledData> trainingOnesFivesSet = generateOnesFivesSet(400, trainingset);
+    std::vector<LabeledData> testOnesFivesSet = generateOnesFivesSet(100, testset);
     
     // Erase the training and test sets to save memory
     trainingset.clear();
@@ -62,21 +67,50 @@ int main(int argc, const char * argv[]) {
     calcStandardizedFeatures(trainingOnesFivesSet);
     calcStandardizedFeatures(testOnesFivesSet);
     
-    // Create Single Perceptron
+    // Create Single Perceptron with a weights vector the same size as the test data. A bias of 0 and a learning rate of 0.5
     Perceptron<LabeledData> mnistPerceptron(trainingOnesFivesSet[0].getFeaturesVector().size(), 0.0f, 0.5f);
     
-    // Run Training Data
-    mnistPerceptron.runTrainingData(1000, trainingOnesFivesSet);
+    // Run Training Data for 100 iterations
+    mnistPerceptron.runTrainingData(100, trainingOnesFivesSet);
     
-    // Compare Results
-    for (auto& i : trainingOnesFivesSet) {
-        //asciiDrawer(i);
-        std::cout << "Binary Label:      " << i.getBinaryLabel() << std::endl;
-        std::cout << "Perceptron Output: " << mnistPerceptron.runTestData(i) << std::endl;
-        std::cout << "===================================" << std::endl;
-    }
+    // Print out the error estimate and weights
+    printPerceptron(mnistPerceptron);
+    
+    // Run training data and test data
+    std::cout << std::fixed << std::setprecision(4);
+    std::cout << "Actual Training Success Rate: " << runTestData(mnistPerceptron, trainingOnesFivesSet) << "%" << std::endl;
+    std::cout << "Actual Test Success Rate: " << runTestData(mnistPerceptron, testOnesFivesSet) << "%" << std::endl;
     
     return 0;
+}
+
+// Print out the error estimate and weight vector for the perceptron
+void printPerceptron(Perceptron<LabeledData>& mnistPerceptron) {
+    // Show best weights and error estimate
+    std::cout << std::fixed << std::setprecision(4);
+    std::cout << "Perceptron Error Estimate: " << mnistPerceptron.getErrorEstimate()*100.0f << "%" << std::endl;
+    std::cout << std::fixed << std::setprecision(9);
+    std::cout << "Perceptron Weight Vector =\n{";
+    for (auto& i : mnistPerceptron.getWeights()) {
+        std::cout << " <" << i << ">, ";
+    }
+    std::cout << "}" << std::endl;
+}
+
+// Run a set of data and compute the success rate percentage
+double runTestData(Perceptron<LabeledData>& mnistPerceptron, std::vector<LabeledData>& labeledSet) {
+    // Compute success rate
+    double successCount = 0.0f;
+    for (auto& i : labeledSet) {
+        bool output = mnistPerceptron.runTestData(i);
+        if (output == i.getBinaryLabel()) {
+            successCount++;
+        }
+        // Uncomment to print tested image
+        //asciiDrawer(i);
+        //std::cout << "Perceptron Output: " << output << std::endl;
+    }
+    return (successCount/(double)labeledSet.size())*100.0f;
 }
 
 // Industry standard proprietary image viewing algorithm patent pending by Matt Smith

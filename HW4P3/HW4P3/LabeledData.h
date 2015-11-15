@@ -31,7 +31,6 @@ class LabeledData {
         double calcSymmetry();
         std::pair<double, double> calcHorizontalIntersections();
         std::pair<double, double> calcVerticalIntersections();
-        double transform(double input, double inputlow, double inputhigh, double outputlow, double outputhigh);
     
     public:
         // Parameterized Constructor
