@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <random>
 #include <chrono>
+#include <cmath>
 #include "MNISTLoader.h"
 #include "RaviMNISTLoader.h"
 #include "Perceptron.h"
@@ -20,6 +21,9 @@ void asciiDrawer(LabeledData& image);
 
 // Function to generate a set of LabeledData containing only 1 and 5
 std::vector<LabeledData> generateOnesFivesSet(size_t limit, std::vector<LabeledData>& labeledSet);
+
+// Calculate the standardized features across the entire set
+void calcStandardizedFeatures(std::vector<LabeledData>& labeledSet);
 
 int main(int argc, const char * argv[]) {
     MNISTLoader loader;
@@ -53,6 +57,10 @@ int main(int argc, const char * argv[]) {
     // Erase the training and test sets to save memory
     trainingset.clear();
     testset.clear();
+    
+    // Calculate standardized features
+    calcStandardizedFeatures(trainingOnesFivesSet);
+    calcStandardizedFeatures(testOnesFivesSet);
     
     // Create Single Perceptron
     Perceptron<LabeledData> mnistPerceptron(trainingOnesFivesSet[0].getFeaturesVector().size(), 0.0f, 0.5f);
@@ -120,4 +128,63 @@ std::vector<LabeledData> generateOnesFivesSet(size_t limit, std::vector<LabeledD
         }
     }
     return OnesFivesSet;
+}
+
+// Calculate the standardized features across the entire set
+// This is a very expensive operation on a large set
+void calcStandardizedFeatures(std::vector<LabeledData>& labeledSet) {
+    double densityMean = 0.0f;
+    double symmetryMean = 0.0f;
+    double minIntMean = 0.0f;
+    double maxIntMean = 0.0f;
+    
+    for (auto& i : labeledSet) {
+        auto features = i.getFeaturesVector();
+        densityMean += features[0];
+        symmetryMean += features[1];
+        minIntMean += features[2];
+        maxIntMean += features[3];
+    }
+    
+    densityMean /= labeledSet.size();
+    symmetryMean /= labeledSet.size();
+    minIntMean /= labeledSet.size();
+    maxIntMean /= labeledSet.size();
+    
+    // Calculate Standard Deviation
+    double densitySD = 0.0f;
+    double symmetrySD = 0.0f;
+    double minIntSD = 0.0f;
+    double maxIntSD = 0.0f;
+    
+    // Sum
+    for (auto& i : labeledSet) {
+        auto features = i.getFeaturesVector();
+        densitySD += pow(densityMean - features[0], 2);
+        symmetrySD += pow(symmetryMean - features[1], 2);
+        minIntSD += pow(minIntMean - features[2], 2);
+        maxIntSD += pow(maxIntMean - features[3], 2);
+    }
+    
+    // Variance
+    densitySD = ((double)(1.0f/labeledSet.size())) * densitySD;
+    symmetrySD = ((double)(1.0f/labeledSet.size())) * symmetrySD;
+    minIntSD = ((double)(1.0f/labeledSet.size())) * minIntSD;
+    maxIntSD = ((double)(1.0f/labeledSet.size())) * maxIntSD;
+    
+    // Standard Deviation
+    densitySD = sqrt(densitySD);
+    symmetrySD = sqrt(symmetrySD);
+    minIntSD = sqrt(minIntSD);
+    maxIntSD = sqrt(maxIntSD);
+    
+    // Writeback features
+    for (auto& i : labeledSet) {
+        auto features = i.getFeaturesVector();
+        features[0] = (features[0] - densityMean) / densitySD;
+        features[1] = (features[1] - symmetryMean) / symmetrySD;
+        features[2] = (features[2] - minIntMean) / minIntSD;
+        features[3] = (features[3] - maxIntMean) / maxIntSD;
+        i.setFeaturesVector(features);
+    }
 }

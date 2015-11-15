@@ -69,6 +69,9 @@ class LabeledData {
     
         // Get the features vector
         std::vector<double> getFeaturesVector();
+    
+        // Set the features vector
+        void setFeaturesVector(std::vector<double> newfeatures);
 };
 
 #endif /* defined(__HW4P3__LabeledData__) */

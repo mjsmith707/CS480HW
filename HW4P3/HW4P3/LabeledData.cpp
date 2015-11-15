@@ -69,7 +69,12 @@ std::vector<double> LabeledData::getFeaturesVector() {
     return this->features;
 }
 
-// Calculate the features
+// Set the features vector
+void LabeledData::setFeaturesVector(std::vector<double> newfeatures) {
+    this->features = newfeatures;
+}
+
+// Calculate the features (not standardized)
 // 0 = density
 // 1 = symmetry
 // 2 = min intersections (horizontal + vertical)
@@ -82,8 +87,8 @@ std::vector<double> LabeledData::calculateFeatures() {
     result[1] = calcSymmetry();
     std::pair<double, double> horiz = calcHorizontalIntersections();
     std::pair<double, double> vert = calcVerticalIntersections();
-    result[2] = transform(std::get<0>(horiz) + std::get<0>(vert), std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), -1.0f, 1.0f);
-    result[3] = transform(std::get<1>(horiz) + std::get<1>(vert), std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), -1.0f, 1.0f);
+    result[2] = std::get<0>(horiz) + std::get<0>(vert);
+    result[3] = std::get<1>(horiz) + std::get<1>(vert);
     result[4] = -1.0f;  // I still haven't figured this out
     
     return result;
@@ -100,8 +105,6 @@ double LabeledData::calcDensity() {
     }
     
     density /= rows * cols;
-    
-    density = transform(density, std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), -1.0f, 1.0f);
     
     return density;
 }
@@ -138,8 +141,6 @@ double LabeledData::calcSymmetry() {
     }
     
     symmetry /= rows * cols;
-    
-    symmetry = transform(symmetry, std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), -1.0f, 1.0f);
     
     return symmetry;
 }
@@ -202,8 +203,4 @@ std::pair<double, double> LabeledData::calcVerticalIntersections() {
     result = std::make_pair(minimum, maximum);
     
     return result;
-}
-
-double LabeledData::transform(double input, double inputlow, double inputhigh, double outputlow, double outputhigh) {
-    return ((input - inputlow) / (inputhigh - inputlow)) * (outputhigh - outputlow) + outputlow;
 }
