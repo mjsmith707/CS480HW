@@ -11,6 +11,8 @@
 
 #include <vector>
 #include <cmath>    // For exp
+#include <random>   // For rand
+#include <chrono>   // For time
 
 template <class T> class NeuralNetwork {
     private:
@@ -20,7 +22,11 @@ template <class T> class NeuralNetwork {
         // Temporary Input Array
         std::vector<std::vector<double>> tempInput;
     
+        // Temporary Error Array
+        std::vector<std::vector<double>> tempError;
+    
         double beta = 1.0f; //  what is this?
+        // Learning rate
         double learningRate;
     
         // Forward phase calculation
@@ -43,33 +49,63 @@ template <class T> class NeuralNetwork {
                 }
             }
             
-            // Compute the output layer
+            // Compute the output
             double output = 0.0f;
             for (size_t neuron=0; neuron<weights[weights.size()-1].size(); neuron++) {
                 output += tempInput[weights.size()-1][neuron] * weights[weights.size()-1][neuron];
             }
             
-            // Compute the activation
+            // Compute the final activation
             output = activation(beta, output);
             return output;
         }
     
         // Backwards phase calculation
         void propagateBackward(std::vector<double>& input, double label, double output) {
-            // Reset temp input matrix
-            updateInput(input);
+            // Reset temp errors matrix
+            updateTempError();
             
-            // Compute output error
-            double outputError = (label - output) * output * (1 - output);
+            // Compute final output error
+            double outputError = (label - output) * output * (1.0f - output);
             
-            // Update hidden layers
-            // For each hidden layer
+            // Update output layer error
+            // Dot product
+            for (size_t neuron=0; neuron<weights[weights.size()-1].size(); neuron++) {
+                tempError[weights.size()-1][neuron] += weights[weights.size()-1][neuron] * outputError;
+            }
+            // Final multiply
+            for (size_t neuron=0; neuron<weights[weights.size()-1].size(); neuron++) {
+                tempError[weights.size()-1][neuron] = tempError[weights.size()-1][neuron] * (tempInput[weights.size()-1][neuron] * (1.0f - tempInput[weights.size()-1][neuron]));
+            }
+            
+            
+            // Compute output in hidden layers
+            // For each layer
             for (long long layer=weights.size()-2; layer>0; layer--) {
-                // For each neuron
+                // For each neuron in the layer
+                // Compute dot product of neuron weight and output error
                 for (size_t neuron=0; neuron<weights[layer].size(); neuron++) {
-                    
+                    tempError[layer][neuron] += weights[layer][neuron] * tempError[layer+1][neuron];
+                }
+                // Final multiply
+                for (size_t neuron=0; neuron<weights[weights.size()-1].size(); neuron++) {
+                    tempError[layer][neuron] = tempError[layer][neuron] * (tempInput[layer][neuron] * (1.0f - tempInput[layer][neuron]));
                 }
             }
+            
+            // Update output layer weights
+            for (size_t neuron=0; neuron<weights[weights.size()-1].size(); neuron++) {
+                weights[weights.size()-1][neuron] = weights[weights.size()-1][neuron] - (learningRate * tempError[weights.size()-1][neuron] * tempInput[weights.size()-1][neuron]);
+            }
+            
+            // Update hidden layer inputs
+            for (long long layer=weights.size()-2; layer>0; layer--) {
+                // For each neuron
+                for (size_t neuron=0; neuron<weights[weights.size()-1].size(); neuron++) {
+                    weights[layer][neuron] = weights[layer][neuron] - (learningRate * tempError[layer][neuron] * tempInput[layer][neuron]);
+                }
+            }
+            0;
         }
     
         // Activation Function
@@ -90,11 +126,23 @@ template <class T> class NeuralNetwork {
             }
         }
     
+        // Zero out the temporary errors array
+        void updateTempError() {
+            for (auto& i : tempError) {
+                for (auto& j : i) {
+                    j = 0.0f;
+                }
+            }
+        }
+    
     public:
         // Default Constructor
         // Input size is how large the input vector will be
         // Layers is how many hidden layers to have
         NeuralNetwork(size_t inputSize, size_t layers, double learningRate) : learningRate(learningRate) {
+            // Start random number generator
+            std::random_device rand_device;
+            
             // Each row is a neural network path.
             // The extra row is for the -1 input bias
             weights.resize(inputSize + 1);
@@ -106,9 +154,16 @@ template <class T> class NeuralNetwork {
             }
             
             // Set the -1 bias for each layer
-            //for (size_t layer=0; layer<weights.size(); layer++) {
-                //weights[layer][weights[layer].size()-1] = 1.0f;
-            //}
+            for (size_t layer=0; layer<weights.size(); layer++) {
+                weights[layer][weights[layer].size()-1] = 1.0f;
+            }
+            
+            // Set random weights for each layer
+            for (size_t layer=0; layer<weights.size(); layer++) {
+                for (size_t neuron=0; neuron<weights[layer].size()-1; neuron++) {
+                    weights[layer][neuron] = (-1.0f + ((double)rand_device() / rand_device.max()) * (1.0f - (-1.0f)));
+                }
+            }
             
             // Each row is a neural network path.
             // The extra row is for the -1 input bias
@@ -117,6 +172,12 @@ template <class T> class NeuralNetwork {
             // Each col is a neural network layer
             // There are a minimum of 2 (input and output layers)
             for (auto& i : tempInput) {
+                i.resize(2 + layers);
+            }
+            
+            tempError.resize(inputSize + 1);
+            
+            for (auto& i : tempError) {
                 i.resize(2 + layers);
             }
         }
