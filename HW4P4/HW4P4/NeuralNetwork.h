@@ -16,8 +16,8 @@
 
 template <class T> class NeuralNetwork {
     private:
-        // The NxN network of weights
-        std::vector<std::vector<double>> weights;
+        // The network of perceptrons
+        std::vector<std::vector<std::vector<double>>> network;
     
         // Temporary Input Array
         std::vector<std::vector<double>> tempInput;
@@ -25,104 +25,100 @@ template <class T> class NeuralNetwork {
         // Temporary Error Array
         std::vector<std::vector<double>> tempError;
     
+        size_t inputSize;
+        size_t outputSize;
+        size_t layersSize;
+        size_t neuronSize;
+        size_t weightSize;
+    
         double beta = 1.0f; //  what is this?
+        
         // Learning rate
         double learningRate;
     
         // Forward phase calculation
-        double propagateForward(std::vector<double>& input) {
-            // Update the NxN input matrix
-            updateInput(input);
+        std::vector<double> propagateForward(std::vector<double>& userinput) {
+            // Reset temp input matrix
+            updateInput(userinput);
             
-            // For each layer
-            for (size_t layer=0; layer<weights.size()-1; layer++) {
-                // For each neuron in the layer compute and save it in the next input
-                for (size_t neuron=0; neuron<weights[layer].size(); neuron++) {
-                    // For each input dot product
-                    for (size_t inputIdx=0; inputIdx<weights[layer].size(); inputIdx++) {
-                        tempInput[layer+1][neuron] += tempInput[layer][inputIdx] * weights[layer][neuron];
+            // For every layer
+            for (size_t layer=0; layer<network.size(); layer++) {
+                // For every neuron
+                for (size_t neuron=0; neuron<network[layer].size(); neuron++) {
+                    // For every input
+                    for (size_t input=0; input<tempInput[layer].size(); input++) {
+                        // Compute the sum of squares
+                        tempInput[layer+1][neuron] += tempInput[layer][input] * network[layer][neuron][input];
                     }
-                }
-                // Compute the activation
-                for (size_t neuron=0; neuron<weights[layer].size(); neuron++) {
-                    tempInput[layer+1][neuron] = activation(beta, tempInput[layer+1][neuron]);
+                    // Compute the neuron activation and store in input+1
+                    tempInput[layer+1][neuron] = activation(tempInput[layer+1][neuron]);
                 }
             }
             
-            // Compute the output
-            double output = 0.0f;
-            for (size_t neuron=0; neuron<weights[weights.size()-1].size(); neuron++) {
-                output += tempInput[weights.size()-1][neuron] * weights[weights.size()-1][neuron];
+            // Create an output vector
+            std::vector<double> output;
+            for (size_t i=0; i<tempInput[network.size()].size(); i++) {
+                output.push_back(tempInput[network.size()][i]);
             }
             
-            // Compute the final activation
-            output = activation(beta, output);
             return output;
         }
     
         // Backwards phase calculation
-        void propagateBackward(std::vector<double>& input, double label, double output) {
-            // Reset temp errors matrix
+        void propagateBackward(std::vector<double>& input, std::vector<double>& labels) {
+            // Clear tempError matrix
             updateTempError();
             
-            // Compute final output error
-            double outputError = (label - output) * output * (1.0f - output);
-            
-            // Update output layer error
-            // Dot product
-            for (size_t neuron=0; neuron<weights[weights.size()-1].size(); neuron++) {
-                tempError[weights.size()-1][neuron] += weights[weights.size()-1][neuron] * outputError;
-            }
-            // Final multiply
-            for (size_t neuron=0; neuron<weights[weights.size()-1].size(); neuron++) {
-                tempError[weights.size()-1][neuron] = tempError[weights.size()-1][neuron] * (tempInput[weights.size()-1][neuron] * (1.0f - tempInput[weights.size()-1][neuron]));
+            // Compute output errors
+            // For each neuron in the output layer
+            for (size_t neuron=0; neuron<network[network.size()-1].size(); neuron++) {
+                // Compute error and store in tempError
+                // (output - target) * output * (1 - output);
+                tempError[network.size()-1][neuron] = (tempInput[network.size()][neuron] - labels[neuron]) * tempInput[network.size()][neuron] * (1.0f - tempInput[network.size()][neuron]);
             }
             
-            
-            // Compute output in hidden layers
-            // For each layer
-            for (long long layer=weights.size()-2; layer>0; layer--) {
-                // For each neuron in the layer
-                // Compute dot product of neuron weight and output error
-                for (size_t neuron=0; neuron<weights[layer].size(); neuron++) {
-                    tempError[layer][neuron] += weights[layer][neuron] * tempError[layer+1][neuron];
-                }
-                // Final multiply
-                for (size_t neuron=0; neuron<weights[weights.size()-1].size(); neuron++) {
-                    tempError[layer][neuron] = tempError[layer][neuron] * (tempInput[layer][neuron] * (1.0f - tempInput[layer][neuron]));
+            // Compute outputs in the hidden layers
+            for (size_t layer=network.size()-2; layer != 0; layer--) {
+                // For each neuron in the hidden layer
+                for (size_t neuron=0; neuron<network[layer].size(); neuron++) {
+                    // Compute sum weight * previous error
+                    for (size_t weight=0; weight<network[layer][neuron].size(); weight++) {
+                        tempError[layer][neuron] += network[layer][neuron][weight] * tempError[layer+1][neuron];
+                    }
+                    // Compute output*(1-output)*sum
+                    tempError[layer][neuron] *= tempInput[layer+1][neuron] * (1.0f - tempInput[layer+1][neuron]);
                 }
             }
             
-            // Update output layer weights
-            for (size_t neuron=0; neuron<weights[weights.size()-1].size(); neuron++) {
-                weights[weights.size()-1][neuron] = weights[weights.size()-1][neuron] - (learningRate * tempError[weights.size()-1][neuron] * tempInput[weights.size()-1][neuron]);
-            }
-            
-            // Update hidden layer inputs
-            for (long long layer=weights.size()-2; layer>0; layer--) {
-                // For each neuron
-                for (size_t neuron=0; neuron<weights[weights.size()-1].size(); neuron++) {
-                    weights[layer][neuron] = weights[layer][neuron] - (learningRate * tempError[layer][neuron] * tempInput[layer][neuron]);
+            // Update weights
+            // weight = weight - rate * error * input
+            for (size_t layer=network.size()-1; layer != 0; layer--) {
+                for (size_t neuron=0; neuron<network[layer].size(); neuron++) {
+                    for (size_t weight=0; weight<network[layer][neuron].size(); weight++) {
+                        network[layer][neuron][weight] = network[layer][neuron][weight] - learningRate * tempError[layer][neuron] * tempInput[layer][neuron];
+                    }
                 }
             }
-            0;
         }
     
-        // Activation Function
-        double activation(double beta, double h) {
-            return 1.0f/(1.0f + exp(-beta*h));
+        // Neuron activation function
+        double activation(double h) {
+            return 1.0f/(1.0f + exp(-h));
         }
     
+        // Resets the temporary input vector before the next propagation
         void updateInput(std::vector<double>& input) {
             // Set first level of input to the specified input
             tempInput[0] = input;
             // Add bias input
-            tempInput[0][tempInput[0].size()-1] = -1.0f;
+            tempInput[0].push_back(-1.0f);
+            // Other layers have same size input vector
             // Zero out other layers
             for (size_t i=1; i<tempInput.size(); i++) {
-                for (size_t j=0; j<tempInput[i].size(); j++) {
+                for (size_t j=0; j<tempInput[i].size()-1; j++) {
                     tempInput[i][j] = 0.0f;
                 }
+                tempInput[i][tempInput[i].size()-1] = -1.0f;    // Bias input
             }
         }
     
@@ -137,60 +133,113 @@ template <class T> class NeuralNetwork {
     
     public:
         // Default Constructor
-        // Input size is how large the input vector will be
-        // Layers is how many hidden layers to have
-        NeuralNetwork(size_t inputSize, size_t layers, double learningRate) : learningRate(learningRate) {
+        // neuronSize is how many neurons per layer
+        // layersSize is how many hidden layers to have
+        // inputSize is how many inputs to have in the input layer
+        // outputSize is how many outputs to have in the output layer
+        NeuralNetwork(size_t newLayersSize, size_t newNeuronSize, size_t newInputSize, size_t newOutputSize, double newLearningRate)
+        : layersSize(newLayersSize), neuronSize(newNeuronSize), inputSize(newInputSize), outputSize(newOutputSize), learningRate(newLearningRate) {
             // Start random number generator
             std::random_device rand_device;
             
-            // Each row is a neural network path.
-            // The extra row is for the -1 input bias
-            weights.resize(inputSize + 1);
+            // Init Neural Network Matrix
+            this->inputSize += 1;   // Bias input
+            this->layersSize += 1;   // Input and Output Layer
+            this->weightSize = neuronSize + 1;  // # of neuron outputs + bias
             
-            // Each col is a neural network layer
-            // There are a minimum of 2 (input and output layers)
-            for (auto& i : weights) {
-                i.resize(2 + layers);
-            }
+            // Resize number of network layers
+            network.resize(layersSize);
             
-            // Set the -1 bias for each layer
-            for (size_t layer=0; layer<weights.size(); layer++) {
-                weights[layer][weights[layer].size()-1] = 1.0f;
-            }
-            
-            // Set random weights for each layer
-            for (size_t layer=0; layer<weights.size(); layer++) {
-                for (size_t neuron=0; neuron<weights[layer].size()-1; neuron++) {
-                    weights[layer][neuron] = (-1.0f + ((double)rand_device() / rand_device.max()) * (1.0f - (-1.0f)));
+            // Input Layer
+            network[0].resize(neuronSize);
+            // For each neuron
+            for (size_t neuron=0; neuron<network[0].size(); neuron++) {
+                // There are inputSize # of weights per neuron
+                network[0][neuron].resize(inputSize);
+                // Initialize weights
+                for (size_t weight=0; weight<network[0][neuron].size(); weight++) {
+                    network[0][neuron][weight] = (-1.0f + ((double)rand_device() / rand_device.max()) * (1.0f - (-1.0f)));
                 }
             }
             
-            // Each row is a neural network path.
-            // The extra row is for the -1 input bias
-            tempInput.resize(inputSize + 1);
-            
-            // Each col is a neural network layer
-            // There are a minimum of 2 (input and output layers)
-            for (auto& i : tempInput) {
-                i.resize(2 + layers);
+            // Hidden Layers
+            for (size_t layer=1; layer<network.size()-1; layer++) {
+                // There are neuronSize # of neurons in the hidden layers
+                network[layer].resize(neuronSize);
+                // For each neuron in the layer
+                for (size_t neuron=0; neuron<network[layer].size(); neuron++) {
+                    // Add weightSize # of weights
+                    network[layer][neuron].resize(weightSize);
+                    // Initialize weights
+                    for (size_t weight=0; weight<network[layer][neuron].size(); weight++) {
+                        network[layer][neuron][weight] = (-1.0f + ((double)rand_device() / rand_device.max()) * (1.0f - (-1.0f)));
+                    }
+                }
             }
             
-            tempError.resize(inputSize + 1);
+            // Output Layer
+            network[network.size()-1].resize(outputSize);
+            // For each neuron
+            for (size_t neuron=0; neuron<network[network.size()-1].size(); neuron++) {
+                // There are weightSize # of inputs
+                network[network.size()-1][neuron].resize(weightSize);
+                // Initialize weights
+                for (size_t weight=0; weight<network[network.size()-1][neuron].size(); weight++) {
+                    network[network.size()-1][neuron][weight] = (-1.0f + ((double)rand_device() / rand_device.max()) * (1.0f - (-1.0f)));
+                }
+            }
             
-            for (auto& i : tempError) {
-                i.resize(2 + layers);
+            // Initialize Temporary Structures
+            // tempInput is a jagged array for propagating neuron activation between layers
+            tempInput.resize(layersSize + 1);   // +1 for activation record of the output layer
+            
+            // Input layer's input
+            tempInput[0].resize(inputSize);
+            tempInput[0][inputSize-1] = -1.0f;   // Bias input
+            
+            // Hidden and output layer's input
+            for (size_t layer=1; layer<tempInput.size()-1; layer++) {
+                tempInput[layer].resize(weightSize);
+                // Initialize input layer to 0
+                for (size_t input=0; input<tempInput[layer].size()-1; input++) {
+                    tempInput[layer][input] = 0.0f;
+                }
+                // Initialize bias input
+                tempInput[layer][tempInput[layer].size()-1] = -1.0f;
+            }
+            
+            // Output Layer's output
+            tempInput[layersSize].resize(outputSize);
+            tempInput[layersSize][outputSize-1] = 0.0f;
+            
+            // Error Propagation Matrix
+            tempError.resize(layersSize);
+            for (size_t layer=0; layer<tempError.size(); layer++) {
+                tempError[layer].resize(neuronSize);
+                // Zero out array
+                for (size_t error=0; error<tempError[layer].size(); error++) {
+                    tempError[layer][error] = 0.0f;
+                }
             }
         }
     
         void train(T& input) {
             // Get the input's features
             std::vector<double> features = input.getFeaturesVector();
-            
+            std::vector<double> labels = input.getLabelsVector();
             // Propagate forward the input
-            double output = propagateForward(features);
+            propagateForward(features);
             
             // Propagate the output backward to compute the error and adjust weights
-            propagateBackward(features, input.getLabel(), output);
+            propagateBackward(features, labels);
+        }
+    
+        std::vector<double> identify(T& input) {
+            // Get the input's features
+            std::vector<double> features = input.getFeaturesVector();
+            
+            // Propagate forward the input
+            return propagateForward(features);
         }
 };
 

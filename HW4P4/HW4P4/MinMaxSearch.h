@@ -62,7 +62,6 @@ class MinMaxSearch {
             std::vector<std::shared_ptr<T>> candidates = u->neighbors();
             for (auto& v : candidates) {
                 val = maxNode ? std::max(val, minmax(v)) : std::min(val, minmax(v));
-                
             }
             
             return val;

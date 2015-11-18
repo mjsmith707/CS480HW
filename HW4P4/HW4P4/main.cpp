@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <iomanip>
 #include "MinMaxSearch.h"
 #include "TicTacToe.h"
 #include "NeuralNetwork.h"
@@ -27,12 +28,13 @@ std::vector<std::vector<size_t>> generatePermutations(TicTacToe::GameBoard& boar
 class DummyData {
     public:
         std::vector<double> features;
-        double label;
-        DummyData(double label) : label(label) {
+        std::vector<double> labels;
+        DummyData(std::vector<double> labels, std::vector<double> features) : labels(labels), features(features) {
+        
         }
     
-        double getLabel() {
-            return this->label;
+        std::vector<double> getLabelsVector() {
+            return this->labels;
         }
     
         std::vector<double> getFeaturesVector() {
@@ -40,19 +42,62 @@ class DummyData {
         }
 };
 
+void printVector(std::vector<double> vctr) {
+    std::cout << std::fixed << std::setprecision(10);
+    for (auto& i : vctr) {
+        std::cout << i << ", ";
+    }
+    std::cout << std::endl;
+}
+
 int main(int argc, const char * argv[]) {
+    std::vector<std::vector<std::vector<double>>> temp;
+    temp.resize(4);
+    temp[0].resize(4);
+    temp[0][0].resize(4);
+    temp[0][0][0] = 4.0f;
+    
+    
     //runMenu();
+    // size_t newLayersSize, size_t newNeuronSize, size_t newInputSize, size_t newOutputSize, double newLearningRate
+    NeuralNetwork<DummyData> testnn(1,2,2,1,0.25);
     
-    NeuralNetwork<DummyData> testnn(5,1,0.5);
-    std::vector<double> features = {0.58, -.543, -.122, .953, .234};
-    DummyData test(1.0f);
+    std::vector<double> features = {0.0f, 0.0f};
+    std::vector<double> labels = {0.0f};
+    DummyData test(labels, features);
     
-    test.features = features;
+    std::vector<double> features2 = {0.0f, 1.0f};
+    std::vector<double> labels2 = {1.0f};
+    DummyData test2(labels2, features2);
     
-    testnn.train(test);
+    std::vector<double> features3 = {1.0f, 0.0f};
+    std::vector<double> labels3 = {1.0f};
+    DummyData test3(labels3, features3);
     
+    std::vector<double> features4 = {1.0f, 1.0f};
+    std::vector<double> labels4 = {1.0f};
+    DummyData test4(labels4, features4);
+    
+    std::vector<DummyData> testData;
+    testData.push_back(test);
+    testData.push_back(test2);
+    testData.push_back(test3);
+    testData.push_back(test4);
+    
+    for (size_t i=0; i<100000; i++) {
+        // Shuffle
+        std::random_shuffle(testData.begin(), testData.end());
+        for (auto& i : testData) {
+            testnn.train(i);
+        }
+    }
+    
+    std::cout << "Test output2: "; printVector(testnn.identify(test));
+    std::cout << "Test output2: "; printVector(testnn.identify(test2));
     return 0;
 }
+
+
 
 // Root Level Menu
 void runMenu() {
