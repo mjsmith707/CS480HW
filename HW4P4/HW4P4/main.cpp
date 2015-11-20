@@ -58,10 +58,10 @@ int main(int argc, const char * argv[]) {
     // input size = 16
     // neuron size = ??
     // output size = 1
-    neuralNetwork nn(16, 20, 1);
+    neuralNetwork nn(16, 25, 1);
     // Learning rate = 0.25
     // Momentum = 0.8
-    nn.setLearningParameters(0.25, 0.8);
+    nn.setLearningParameters(0.05, 0.8);
     // Desired 90% accuracy
     nn.setDesiredAccuracy(90);
     // 2000 iterations?
