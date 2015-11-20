@@ -29,6 +29,9 @@
     Alpha-Beta Additions
     // Returns a static evaluation of T for MinMax Alpha-Beta
     long long EvalAB();
+    
+    Neural Network Training Additions zzz
+    void setLabel(long long);
 */
 
 // MinMaxSearch Template Class
@@ -86,6 +89,8 @@ class MinMaxSearch {
                 std::vector<std::shared_ptr<T>> candidates = u->neighbors();
                 for (auto& v : candidates) {
                     long long val = minmaxab(v, res, beta, depth+1);
+                    v->setLabel(val);
+                    labeledData.push_back(v);
                     res = std::max(res, val);
                     
                     if (res >= beta) {
@@ -100,6 +105,8 @@ class MinMaxSearch {
                 std::vector<std::shared_ptr<T>> candidates = u->neighbors();
                 for (auto& v : candidates) {
                     long long val = minmaxab(v, alpha, res, depth+1);
+                    v->setLabel(val);
+                    labeledData.push_back(v);
                     res = std::min(res, val);
                     
                     if (res <= alpha) {
@@ -113,6 +120,8 @@ class MinMaxSearch {
         }
     
     public:
+        std::vector<std::shared_ptr<T>> labeledData;
+    
         // Parameterized Constructor
         // Sets the Alpha-Beta Max Depth
         MinMaxSearch(size_t depth) : exploredCount(1), abMaxDepth(depth) {
@@ -137,6 +146,7 @@ class MinMaxSearch {
     
         // Run the MinMax Algorithm with Alpha-Beta Pruning for T
         long long runMinMaxABSearch(T u) {
+            labeledData.clear();
             exploredCount = 0;
             std::shared_ptr<T> start(new T(u));
             return minmaxab(start, std::numeric_limits<long long>::min(), std::numeric_limits<long long>::max(), 0);

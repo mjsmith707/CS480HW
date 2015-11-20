@@ -185,3 +185,24 @@ bool TicTacToe::isBoardFull() {
     }
     return true;
 }
+
+void TicTacToe::setLabel(long long newlabel) {
+    // Transform to -1 to 1
+    if (newlabel >= 0.9f) {
+        this->label = 1.0f;
+    }
+    else if (newlabel <= -0.9f) {
+        this->label = -1.0f;
+    }
+    else {
+        this->label = 0.0f;
+    }
+}
+
+double TicTacToe::getLabel() {
+    return this->label;
+}
+
+std::vector<std::vector<TicTacToe::XO>> TicTacToe::getGameBoard() {
+    return this->board;
+}

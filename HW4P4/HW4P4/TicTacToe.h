@@ -31,6 +31,9 @@ class TicTacToe {
         // Boolean representing whether this is a max node or not
         bool maxNode;
     
+        // Win/lose/draw label
+        double label;
+    
         // Function to calculate whether this is a max node or not
         bool calcMaxNode();
     
@@ -68,4 +71,11 @@ class TicTacToe {
     
         // Returns a vector of neighbors of this node
         std::vector<std::shared_ptr<TicTacToe>> neighbors();
+    
+        // Set labeled data entry
+        void setLabel(long long newlabel);
+    
+        double getLabel();
+    
+        std::vector<std::vector<XO>> getGameBoard();
 };

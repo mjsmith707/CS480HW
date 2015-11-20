@@ -24,12 +24,13 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		45F04B2A1BFEB25400FDAC54 /* neuralNetwork.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = neuralNetwork.h; sourceTree = "<group>"; };
+		45F04B2B1BFEB33300FDAC54 /* dataEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dataEntry.h; sourceTree = "<group>"; };
 		45F1AFAF1BF9417D0003DE94 /* HW4P4 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = HW4P4; sourceTree = BUILT_PRODUCTS_DIR; };
 		45F1AFB91BF942320003DE94 /* MinMaxSearch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MinMaxSearch.h; sourceTree = "<group>"; };
 		45F1AFBA1BF942320003DE94 /* TicTacToe.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TicTacToe.cpp; sourceTree = "<group>"; };
 		45F1AFBB1BF942320003DE94 /* TicTacToe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TicTacToe.h; sourceTree = "<group>"; };
 		45F1AFBE1BF9424A0003DE94 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		45F1AFC01BF9441F0003DE94 /* NeuralNetwork.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NeuralNetwork.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,7 +67,8 @@
 				45F1AFB91BF942320003DE94 /* MinMaxSearch.h */,
 				45F1AFBA1BF942320003DE94 /* TicTacToe.cpp */,
 				45F1AFBB1BF942320003DE94 /* TicTacToe.h */,
-				45F1AFC01BF9441F0003DE94 /* NeuralNetwork.h */,
+				45F04B2B1BFEB33300FDAC54 /* dataEntry.h */,
+				45F04B2A1BFEB25400FDAC54 /* neuralNetwork.h */,
 			);
 			path = HW4P4;
 			sourceTree = "<group>";
@@ -245,6 +247,7 @@
 				45F1AFB81BF9417D0003DE94 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

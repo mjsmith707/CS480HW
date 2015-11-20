@@ -6,6 +6,7 @@
 //  Copyright (c) 2015 Matt. All rights reserved.
 //
 
+// Neural network from: takinginitiative.wordpress.co.za by Bobby Anguelov (banguelov@cs.up.ac.za)
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -13,17 +14,17 @@
 #include <iomanip>
 #include "MinMaxSearch.h"
 #include "TicTacToe.h"
-#include "NeuralNetwork.h"
+#include "neuralNetwork.h"
 
-void runSampleCases();
+std::vector<std::shared_ptr<TicTacToe>> runSampleCases();
 void runMenu();
 void runFileMenu();
 TicTacToe::GameBoard readFile();
 TicTacToe::XO raviToSmithConverter(long long val);
 void runTicTacToe(TicTacToe::GameBoard& board);
-void runTicTacToeAB(TicTacToe::GameBoard& board);
+std::vector<std::shared_ptr<TicTacToe>> runTicTacToeAB(TicTacToe::GameBoard& board);
 std::vector<std::vector<size_t>> generatePermutations(TicTacToe::GameBoard& board);
-
+std::vector<dataEntry*> convertToDataEntry(std::vector<std::shared_ptr<TicTacToe>>& boards);
 
 class DummyData {
     public:
@@ -51,177 +52,74 @@ void printVector(std::vector<double> vctr) {
 }
 
 int main(int argc, const char * argv[]) {
-    std::vector<std::vector<std::vector<double>>> temp;
-    temp.resize(4);
-    temp[0].resize(4);
-    temp[0][0].resize(4);
-    temp[0][0][0] = 4.0f;
-    
-    
     //runMenu();
-    // size_t newLayersSize, size_t newNeuronSize, size_t newInputSize, size_t newOutputSize, double newLearningRate
-    NeuralNetwork<DummyData> testnn(1,2,2,1,0.25);
     
-    std::vector<double> features = {0.0f, 0.0f};
-    std::vector<double> labels = {0.0f};
-    DummyData test(labels, features);
+    // Create the nn
+    // input size = 16
+    // neuron size = ??
+    // output size = 1
+    neuralNetwork nn(16, 20, 1);
+    // Learning rate = 0.25
+    // Momentum = 0.8
+    nn.setLearningParameters(0.25, 0.8);
+    // Desired 90% accuracy
+    nn.setDesiredAccuracy(90);
+    // 2000 iterations?
+    nn.setMaxEpochs(2000);
+
+    std::vector<std::shared_ptr<TicTacToe>> boards = runSampleCases();
+    std::vector<dataEntry*> data = convertToDataEntry(boards);
     
-    std::vector<double> features2 = {0.0f, 1.0f};
-    std::vector<double> labels2 = {1.0f};
-    DummyData test2(labels2, features2);
+    // Train network, probably need different datasets for each of these
+    nn.trainNetwork(data, data, data);
     
-    std::vector<double> features3 = {1.0f, 0.0f};
-    std::vector<double> labels3 = {1.0f};
-    DummyData test3(labels3, features3);
-    
-    std::vector<double> features4 = {1.0f, 1.0f};
-    std::vector<double> labels4 = {1.0f};
-    DummyData test4(labels4, features4);
-    
-    std::vector<DummyData> testData;
-    testData.push_back(test);
-    testData.push_back(test2);
-    testData.push_back(test3);
-    testData.push_back(test4);
-    
-    for (size_t i=0; i<100000; i++) {
-        // Shuffle
-        std::random_shuffle(testData.begin(), testData.end());
-        for (auto& i : testData) {
-            testnn.train(i);
-        }
+    // See how we did
+    for (size_t i=0; i<data.size(); i++) {
+        double* out = nn.feedInput(data[i]->pattern);
+        std::cout << "i = " << i << ", input = " << data[i]->target[0] << std::endl;
+        std::cout << "i = " << i << ", output = " << nn.getRoundedOutputValue(*out) << std::endl;
     }
     
-    std::cout << "Test output2: "; printVector(testnn.identify(test));
-    std::cout << "Test output2: "; printVector(testnn.identify(test2));
     return 0;
 }
 
-
-
-// Root Level Menu
-void runMenu() {
-    do {
-        std::cout << "Enter a choice:" << std::endl;
-        std::cout << "[1] Run Test Cases, [2] Load and run file, [q] Quit" << std::endl;
-        std::cout << "> ";
-        char input = 0;
-        if (std::cin >> input) {
-            switch (input) {
-                case '1': {
-                    runSampleCases();
-                    break;
-                }
-                case '2': {
-                    try {
-                        runFileMenu();
-                    }
-                    catch (std::runtime_error& e) {
-                        std::cout << e.what() << std::endl;
-                        break;
-                    }
-                    catch (std::invalid_argument& e) {
-                        std::cout << e.what() << std::endl;
-                        break;
-                    }
-                    
-                    break;
-                }
-                case 'q': {
-                case 'Q':
-                    return;
-                }
-                default: {
-                    std::cout << "Invalid choice selected!" << std::endl;
-                    break;
-                }
+// Convert my awesome enumerated board types to a dataEntry* vector
+std::vector<dataEntry*> convertToDataEntry(std::vector<std::shared_ptr<TicTacToe>>& boards) {
+    std::vector<dataEntry*> result;
+    for (auto& i : boards) {
+        std::vector<std::vector<TicTacToe::XO>> board = i->getGameBoard();
+        double* pattern = new double[board.size()*board[0].size()];
+        double* target = new double[1];
+        target[0] = i->getLabel();
+        size_t count=0;
+        for (auto& x : board) {
+            for (auto& y : x) {
+                pattern[count] = y;
+                count++;
             }
         }
-    } while (true);
-}
-
-// Run File Menu
-void runFileMenu() {
-    TicTacToe::GameBoard loadedboard = readFile();
-    std::cout << std::endl << "File Loaded." << std::endl;
+        dataEntry* entry = new dataEntry(pattern, target);
+        result.push_back(entry);
+    }
     
-    do {
-        std::cout << "[1] Run Minmax, [2] Run Minmax AlphaBeta, [q] Return" << std::endl;
-        std::cout << "> ";
-        char input = 0;
-        if (std::cin >> input) {
-            switch (input) {
-                case '1': {
-                    runTicTacToe(loadedboard);
-                    break;
-                }
-                case '2': {
-                    runTicTacToeAB(loadedboard);
-                    break;
-                }
-                case 'q': {
-                case 'Q':
-                    return;
-                }
-                default:
-                    std::cout << "Invalid choice selected!" << std::endl;
-                    break;
-            }
-        }
-    } while (true);
+    return result;
 }
 
-// Read file from input
-TicTacToe::GameBoard readFile() {
-    std::cin.ignore();
-    std::string input = "";
-    std::cout << "Enter filename: ";
-    if (std::getline(std::cin, input)) {
-        std::fstream stream;
-        stream.open(input);
-        if (!stream.is_open()) {
-            std::string error = "Failed to open file: ";
-            error += input;
-            throw std::runtime_error(error);
-        }
-        
-        TicTacToe::GameBoard newboard;
-        std::string line;
-        while (std::getline(stream, line)) {
-            std::stringstream sstream;
-            sstream << line;
-            long long val = 0;
-            std::vector<TicTacToe::XO> newrow;
-            while (sstream >> val) {
-                newrow.push_back(raviToSmithConverter(val));
-            }
-            newboard.push_back(newrow);
-        }
-        return newboard;
-    }
-    else {
-        throw std::runtime_error("Failed to read file name from stdin");
-    }
-}
-
-// Convert from 0 = Empty, 1 = Player 1, 2 = Player 2 to
-// TicTacToe::XO enumerations.
-TicTacToe::XO raviToSmithConverter(long long val) {
-    switch(val) {
-        case 0: {
-            return TicTacToe::EMPTY;
-        }
-        case 1: {
-            return TicTacToe::X;
-        }
-        case 2: {
-            return TicTacToe::O;
-        }
-        default:
-            std::string error = "Invalid value in board: ";
-            error += std::to_string(val);
-            throw std::runtime_error(error);
-    }
+// Run TicTacToe minmax with alpha beta for given board
+std::vector<std::shared_ptr<TicTacToe>> runTicTacToeAB(TicTacToe::GameBoard& board) {
+    MinMaxSearch<TicTacToe> search(6);
+    std::vector<std::vector<size_t>> permBoard = generatePermutations(board);
+    TicTacToe game(board, permBoard);
+    std::cout << "-- Alpha Beta Pruning -- " << std::endl;
+    std::cout << "Initial Board:" << std::endl;
+    game.printBoard(std::cout);
+    std::cout << "Min Max AB Result = " << search.runMinMaxABSearch(game) << std::endl;
+    std::cout << "Explored = " << search.getLastExploredCount() << std::endl;
+    std::cout << "Move Made:" << std::endl;
+    search.getMoveNode()->printBoard(std::cout);
+    std::cout << std::endl;
+    
+    return search.labeledData;
 }
 
 // Generate the solutions for a given tic tac toe board
@@ -245,7 +143,7 @@ std::vector<std::vector<size_t>> generatePermutations(TicTacToe::GameBoard& boar
 }
 
 // Test Cases from piazza PDF
-void runSampleCases() {
+std::vector<std::shared_ptr<TicTacToe>> runSampleCases() {
     TicTacToe::GameBoard test_case0 = {
         {TicTacToe::O, TicTacToe::EMPTY, TicTacToe::EMPTY, TicTacToe::O},
         {TicTacToe::O, TicTacToe::X, TicTacToe::EMPTY, TicTacToe::X},
@@ -288,11 +186,16 @@ void runSampleCases() {
     testCases.push_back(test_case2);
     testCases.push_back(test_case3);
     
+    std::vector<std::shared_ptr<TicTacToe>> result;
+    
     for (size_t i=0; i<testCases.size(); i++) {
         std::cout << "=== Test Case " << i << " ===" << std::endl;
-        runTicTacToe(testCases[i]);
-        runTicTacToeAB(testCases[i]);
+        std::vector<std::shared_ptr<TicTacToe>> temp = runTicTacToeAB(testCases[i]);
+        for (auto& i : temp) {
+            result.push_back(i);
+        }
     }
+    return result;
 }
 
 // Run TicTacToe minmax for given board
@@ -308,17 +211,3 @@ void runTicTacToe(TicTacToe::GameBoard& board) {
     std::cout << std::endl;
 }
 
-// Run TicTacToe minmax with alpha beta for given board
-void runTicTacToeAB(TicTacToe::GameBoard& board) {
-    MinMaxSearch<TicTacToe> search(6);
-    std::vector<std::vector<size_t>> permBoard = generatePermutations(board);
-    TicTacToe game(board, permBoard);
-    std::cout << "-- Alpha Beta Pruning -- " << std::endl;
-    std::cout << "Initial Board:" << std::endl;
-    game.printBoard(std::cout);
-    std::cout << "Min Max AB Result = " << search.runMinMaxABSearch(game) << std::endl;
-    std::cout << "Explored = " << search.getLastExploredCount() << std::endl;
-    std::cout << "Move Made:" << std::endl;
-    search.getMoveNode()->printBoard(std::cout);
-    std::cout << std::endl;
-}
