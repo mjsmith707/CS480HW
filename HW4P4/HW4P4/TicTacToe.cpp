@@ -187,19 +187,29 @@ bool TicTacToe::isBoardFull() {
 }
 
 void TicTacToe::setLabel(long long newlabel) {
-    // Transform to -1 to 1
+    // Transform to binary
     if (newlabel >= 0.9f) {
-        this->label = 1.0f;
+        //this->label = 1.0f;
+        label.push_back(0.0f);
+        label.push_back(1.0f);
     }
     else if (newlabel <= -0.9f) {
-        this->label = -1.0f;
+        //this->label = -1.0f;
+        label.push_back(1.0f);
+        label.push_back(1.0f);
     }
     else {
-        this->label = 0.0f;
+        //this->label = 0.0f;
+        label.push_back(0.0f);
+        label.push_back(0.0f);
     }
 }
 
-double TicTacToe::getLabel() {
+void TicTacToe::setLabel(std::vector<double> newlabel) {
+    this->label = newlabel;
+}
+
+std::vector<double> TicTacToe::getLabel() {
     return this->label;
 }
 

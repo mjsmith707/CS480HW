@@ -32,7 +32,7 @@ class TicTacToe {
         bool maxNode;
     
         // Win/lose/draw label
-        double label;
+        std::vector<double> label;
     
         // Function to calculate whether this is a max node or not
         bool calcMaxNode();
@@ -74,8 +74,9 @@ class TicTacToe {
     
         // Set labeled data entry
         void setLabel(long long newlabel);
+        void setLabel(std::vector<double> newlabel);
     
-        double getLabel();
+        std::vector<double> getLabel();
     
         std::vector<std::vector<XO>> getGameBoard();
 };
