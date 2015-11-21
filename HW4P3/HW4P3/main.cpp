@@ -71,7 +71,9 @@ int main(int argc, const char * argv[]) {
     Perceptron<LabeledData> mnistPerceptron(trainingOnesFivesSet[0].getFeaturesVector().size(), 0.0f, 0.5f);
     
     // Run Training Data for 100 iterations
-    mnistPerceptron.runTrainingData(100, trainingOnesFivesSet);
+    size_t epochs = 100;
+    std::cout << "Running training data for " << epochs << " epochs" << std::endl;
+    mnistPerceptron.runTrainingData(epochs, trainingOnesFivesSet);
     
     // Print out the error estimate and weights
     printPerceptron(mnistPerceptron);
